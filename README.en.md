@@ -44,30 +44,6 @@ The models supported by this project are mainly converted from [EdgeCrafter](htt
 
 After exporting ONNX, you can continue using the TensorRT toolchain to build an engine and deploy inference with this project.
 
-## C++ Examples
-
-Build examples from the repository root:
-
-```bash
-cmake -S . -B build \
-  -DTRT_PATH=/path/to/tensorrt \
-  -DBUILD_EXAMPLES=ON
-cmake --build build -j$(nproc) --config Release --target detect segment pose
-```
-
-Individual examples can be toggled:
-
-```bash
-cmake -S . -B build \
-  -DTRT_PATH=/path/to/tensorrt \
-  -DBUILD_EXAMPLES=ON \
-  -DBUILD_EXAMPLE_DETECT=ON \
-  -DBUILD_EXAMPLE_SEGMENT=OFF \
-  -DBUILD_EXAMPLE_POSE=OFF
-```
-
-See [examples/README.md](examples/README.md) for details.
-
 ## Python Usage
 
 ```python

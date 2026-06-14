@@ -44,30 +44,6 @@ pip install dist/trtdetr-*.whl
 
 导出 ONNX 后，可继续使用 TensorRT 工具链构建 engine，再由本项目进行推理部署。
 
-## C++ 示例
-
-从仓库根目录统一编译示例：
-
-```bash
-cmake -S . -B build \
-  -DTRT_PATH=/path/to/tensorrt \
-  -DBUILD_EXAMPLES=ON
-cmake --build build -j$(nproc) --config Release --target detect segment pose
-```
-
-也可以按需关闭部分示例：
-
-```bash
-cmake -S . -B build \
-  -DTRT_PATH=/path/to/tensorrt \
-  -DBUILD_EXAMPLES=ON \
-  -DBUILD_EXAMPLE_DETECT=ON \
-  -DBUILD_EXAMPLE_SEGMENT=OFF \
-  -DBUILD_EXAMPLE_POSE=OFF
-```
-
-更多说明见 [examples/README.md](examples/README.md)。
-
 ## Python 使用
 
 ```python
