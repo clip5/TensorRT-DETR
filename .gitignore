@@ -1,0 +1,29 @@
+# Build and compilation directories
+build/
+bin/
+libs/
+dist/
+*.egg-info/
+
+# IDE and editor-specific files
+.vscode/
+
+# Python cache and virtual environment
+__pycache__/
+.cache/
+venv/
+
+# Output and generated files
+output/
+outputs/
+*.pt
+*.onnx
+*.engine
+*.trt
+
+# Miscellaneous
+images/
+models/
+workspace/
+cmake/tensorrt-detr-config.cmake
+trtdetr/c_lib_wrap.py
