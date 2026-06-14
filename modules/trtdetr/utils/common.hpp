@@ -63,8 +63,8 @@ struct ProcessConfig {
     bool   swap_rb      = false;                                                  // < 是否交换 R 和 B 通道
     float  conf_thresh  = 0.25f;                                                 // < 置信度阈值
     float  border_value = 114.0f;                                                 // < 边界值，用于填充
-    float3 alpha        = make_float3(1.0 / 255.0f, 1.0 / 255.0f, 1.0 / 255.0f);  // < 归一化系数
-    float3 beta         = make_float3(0.0f, 0.0f, 0.0f);                          // < 偏移量
+    float3 alpha        = make_float3(1.0 / 255.0 / 0.229f, 1.0 / 255.0 / 0.224f, 1.0 / 255.0 / 0.225f);  // < 归一化系数
+    float3 beta         = make_float3(-0.485 / 0.229f, -0.456 / 0.224f, -0.406 / 0.225f);                          // < 偏移量
 };
 
 /**

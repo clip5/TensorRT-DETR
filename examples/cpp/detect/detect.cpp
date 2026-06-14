@@ -167,7 +167,7 @@ int main(int argc, char** argv) {
         trtdetr::InferOption option;
         option.enableSwapRB();
         option.setConfThresh(0.35f);
-        // option.setNormalizeParams({0.485, 0.456, 0.406}, {0.229, 0.224, 0.225}); // PP-YOLOE、PP-YOLOE+
+        // option.setNormalizeParams({0.485, 0.456, 0.406}, {0.229, 0.224, 0.225});
 
         if (!fs::is_regular_file(input_path)) {
             option.enablePerformanceReport();
