@@ -1,5 +1,6 @@
 # Build and compilation directories
 build/
+install
 bin/
 libs/
 dist/

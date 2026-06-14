@@ -53,7 +53,7 @@ def main():
     input_path = Path(args.input)
     extensions = ["*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif"]
 
-    model = TRTDETR(args.engine, task="pose", swap_rb=True, profile=True)
+    model = TRTDETR(args.engine, task="pose", swap_rb=True, profile=True, conf_thresh=0.5)
 
     if input_path.is_dir():
         images, image_names = [], []
@@ -65,7 +65,7 @@ def main():
         results = model.predict(images)
         if args.output:
             for image_name, image, result in zip(image_names, images, results):
-                labels = [class_name[int(cls)] for cls in result.class_id]
+                labels = [class_name[int(cls-1)] for cls in result.class_id]
                 detections = result.as_detections()
                 annotated_frame = box_annotator.annotate(scene=image.copy(), detections=detections)
                 annotated_frame = vertex_annotator.annotate(scene=annotated_frame, key_points=result)
@@ -79,7 +79,7 @@ def main():
         image = cv2.imread(str(input_path))
         result = model.predict(image)
         if args.output:
-            labels = [class_name[int(cls)] for cls in result.class_id]
+            labels = [class_name[int(cls-1)] for cls in result.class_id]
             detections = result.as_detections()
             annotated_frame = box_annotator.annotate(scene=image.copy(), detections=detections)
             annotated_frame = vertex_annotator.annotate(scene=annotated_frame, key_points=result)

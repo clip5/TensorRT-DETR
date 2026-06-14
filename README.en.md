@@ -32,7 +32,7 @@ cmake -S . -B build \
   -DTRT_PATH=/path/to/tensorrt \
   -DBUILD_PYTHON=ON \
   -DCMAKE_INSTALL_PREFIX=/path/to/install
-cmake --build build -j$(nproc) --config Release
+cmake --build build -j$(nproc) --config Release --target install
 pip install dist/trtdetr-*.whl
 ```
 
@@ -52,7 +52,7 @@ Build examples from the repository root:
 cmake -S . -B build \
   -DTRT_PATH=/path/to/tensorrt \
   -DBUILD_EXAMPLES=ON
-cmake --build build -j$(nproc) --config Release --target detect segment pose mutli_thread
+cmake --build build -j$(nproc) --config Release --target detect segment pose
 ```
 
 Individual examples can be toggled:
@@ -63,8 +63,7 @@ cmake -S . -B build \
   -DBUILD_EXAMPLES=ON \
   -DBUILD_EXAMPLE_DETECT=ON \
   -DBUILD_EXAMPLE_SEGMENT=OFF \
-  -DBUILD_EXAMPLE_POSE=OFF \
-  -DBUILD_EXAMPLE_MULTI_THREAD=OFF
+  -DBUILD_EXAMPLE_POSE=OFF
 ```
 
 See [examples/README.md](examples/README.md) for details.

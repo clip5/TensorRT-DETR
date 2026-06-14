@@ -98,7 +98,7 @@ if(BUILD_PYTHON)
         LIBRARY_OUTPUT_DIRECTORY_DEBUG "${PROJECT_SOURCE_DIR}/trtdetr/libs"
         LIBRARY_OUTPUT_DIRECTORY_RELEASE "${PROJECT_SOURCE_DIR}/trtdetr/libs"
     )
-    install_target(py_trtdetr "python")
+    # install_target(py_trtdetr "python")
 
     # 配置 Python 配置文件
     configure_file(

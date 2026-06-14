@@ -65,7 +65,7 @@ if(BUILD_PYTHON)
 endif()
 
 # 示例编译选项
-option(BUILD_EXAMPLES "Build C++ examples" OFF)
+option(BUILD_EXAMPLES "Build C++ examples" ON)
 option(BUILD_EXAMPLE_DETECT "Build detect C++ example" ON)
 option(BUILD_EXAMPLE_SEGMENT "Build segment C++ example" ON)
 option(BUILD_EXAMPLE_POSE "Build pose C++ example" ON)
