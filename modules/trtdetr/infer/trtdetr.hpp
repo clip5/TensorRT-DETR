@@ -27,6 +27,21 @@ namespace trtdetr {
 class BaseModel;  // 前向声明 BaseModel 模板类
 
 /**
+ * @brief 检测模型输出变体，用于区分不同风格的 DETR / YOLO 端到端输出。
+ *
+ * - Auto        : 根据 TensorRT 引擎输出张量的数量与形状自动嗅探，兼容以下三种。
+ * - EdgeDETR    : EdgeCrafter / D-FINE / RT-DETR 风格，3 个输出（labels/boxes/scores，boxes 为归一化 xyxy）。
+ * - RFDETR      : Roboflow RF-DETR 风格，2 个输出（pred_boxes 归一化 cxcywh + logits 原始 logit）。
+ * - YoloEnd2End : YOLO 端到端 (NMS-free) 风格，1 个输出 [B,N,6]（xyxy 已在模型输入空间像素、score、class）。
+ */
+enum class TRTDETRAPI DetectVariant : int {
+    Auto        = 0,
+    EdgeDETR    = 1,
+    RFDETR      = 2,
+    YoloEnd2End = 3,
+};
+
+/**
  * @brief 图像结构体，用于存储图像数据及其尺寸信息
  */
 struct TRTDETRAPI Image {
@@ -450,6 +465,16 @@ public:
      * @param height 高度
      */
     void setInputDimensions(int width, int height);
+
+    /**
+     * @brief 设置检测模型的输出变体，用于兼容 EdgeDETR / RF-DETR / YOLO end-to-end 三种输出布局。
+     *        默认 DetectVariant::Auto，会在首次推理时根据输出张量的数量与形状自动嗅探。
+     *        当自动嗅探不能满足需求（例如自定义命名的引擎）时可显式指定。
+     *        该选项仅对 DetectModel 生效。
+     *
+     * @param variant 检测输出变体
+     */
+    void setDetectVariant(DetectVariant variant);
 
 private:
     class Impl;                   // 前向声明实现类

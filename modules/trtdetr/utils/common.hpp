@@ -16,6 +16,8 @@
 #include <optional>
 #include <vector>
 
+#include "infer/trtdetr.hpp"  // < 需要 DetectVariant 枚举
+
 namespace trtdetr {
 
 /**
@@ -78,6 +80,7 @@ struct InferConfig {
     bool                enable_performance_report = false;  // < 是否启用性能报告
     std::optional<int2> input_shape;                        // < 输入数据的高、宽，未设置时表示宽度可变（用于输入数据宽高确定的任务场景：监控视频分析，AI外挂等）
     ProcessConfig       config;                             // < 图像预处理配置
+    DetectVariant       detect_variant = DetectVariant::Auto;  // < 检测模型输出变体（仅 DetectModel 生效）
 };
 
 /**

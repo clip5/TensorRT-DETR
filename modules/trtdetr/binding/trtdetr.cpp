@@ -200,6 +200,14 @@ void binding_result_module(py::module& m) {
 void binding_option_module(py::module& m) {
     m.doc() = "Option module of trtdetr, providing comprehensive configuration options for inference including device selection, performance monitoring, and image preprocessing.";
 
+    py::enum_<trtdetr::DetectVariant>(m, "DetectVariant",
+        "Output layout variant used by DetectModel. Use Auto to let the library infer from the "
+        "TensorRT engine output tensors; specify explicitly when the engine uses non-standard names.")
+        .value("Auto",        trtdetr::DetectVariant::Auto,        "Auto-detect (default).")
+        .value("EdgeDETR",    trtdetr::DetectVariant::EdgeDETR,    "3 outputs: labels/boxes/scores, boxes are normalized xyxy.")
+        .value("RFDETR",      trtdetr::DetectVariant::RFDETR,      "2 outputs: pred_boxes (normalized cxcywh) + logits (raw logits).")
+        .value("YoloEnd2End", trtdetr::DetectVariant::YoloEnd2End, "1 output [B,N,6] with xyxy (model input pixels) + score + class.");
+
     py::class_<trtdetr::InferOption>(m, "InferOption", "A class to configure advanced inference options for trtdetr models, controlling device selection, performance monitoring, and image preprocessing.")
         .def(py::init<>())
         .def("set_device_id", &trtdetr::InferOption::setDeviceId, "Set the device ID (GPU) for inference.")
@@ -210,7 +218,9 @@ void binding_option_module(py::module& m) {
         .def("set_border_value", &trtdetr::InferOption::setBorderValue, "Set border value for image resizing (used for padding).")
         .def("set_conf_thresh", &trtdetr::InferOption::setConfThresh, "Set confidence threshold for post-processing.")
         .def("set_normalize_params", &trtdetr::InferOption::setNormalizeParams, "Set normalization parameters for image preprocessing.")
-        .def("set_input_dimensions", &trtdetr::InferOption::setInputDimensions, "Set the input dimensions (height, width) for the model.");
+        .def("set_input_dimensions", &trtdetr::InferOption::setInputDimensions, "Set the input dimensions (height, width) for the model.")
+        .def("set_detect_variant", &trtdetr::InferOption::setDetectVariant,
+             "Set the DetectModel output variant. Default DetectVariant.Auto lets the library sniff it from the engine outputs.");
 }
 
 /**

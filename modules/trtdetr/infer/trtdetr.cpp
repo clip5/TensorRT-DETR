@@ -87,6 +87,7 @@ public:
     void        enableManagedMemory() { infer_config.enable_managed_memory = true; }
     void        enablePerformanceReport() { infer_config.enable_performance_report = true; }
     void        setInputDimensions(int width, int height) { infer_config.input_shape = make_int2(height, width); }
+    void        setDetectVariant(DetectVariant variant) { infer_config.detect_variant = variant; }
     void        enableSwapRB() { infer_config.config.swap_rb = true; }
     void        setBorderValue(float value) { infer_config.config.border_value = value; }
     void        setConfThresh(float thresh) { infer_config.config.conf_thresh = thresh; };
@@ -117,6 +118,7 @@ void InferOption::setBorderValue(float border_value) { impl_->setBorderValue(bor
 void InferOption::setConfThresh(float thresh) { impl_->setConfThresh(thresh); }
 void InferOption::setNormalizeParams(const std::vector<float>& mean, const std::vector<float>& std) { impl_->setNormalizeParams(mean, std); }
 void InferOption::setInputDimensions(int width, int height) { impl_->setInputDimensions(height, width); }
+void InferOption::setDetectVariant(DetectVariant variant) { impl_->setDetectVariant(variant); }
 
 class BaseModel::Impl {
 public:
@@ -137,6 +139,7 @@ public:
         clone_impl->backend_         = backend_->clone();
         clone_impl->infer_gpu_trace_ = std::make_unique<GpuTimer>(clone_impl->backend_->stream);
         clone_impl->infer_cpu_trace_ = std::make_unique<CpuTimer>();
+        clone_impl->detect_variant_resolved_ = detect_variant_resolved_;  // 继承已解析的检测变体
         return clone_impl;
     }
 
@@ -221,6 +224,21 @@ public:
 
     // DetectModel 的后处理方法实现
     DetectRes postProcessDetect(int idx) {
+        // 首次调用时解析变体（缓存到成员）
+        if (detect_variant_resolved_ == DetectVariant::Auto) {
+            detect_variant_resolved_ = resolveDetectVariant();
+        }
+
+        switch (detect_variant_resolved_) {
+            case DetectVariant::RFDETR:      return postProcessDetectRFDETR(idx);
+            case DetectVariant::YoloEnd2End: return postProcessDetectYoloE2E(idx);
+            case DetectVariant::EdgeDETR:
+            default:                         return postProcessDetectEdgeDETR(idx);
+        }
+    }
+
+    // EdgeCrafter / D-FINE / RT-DETR 风格：3 个输出（labels / boxes / scores，boxes 为归一化 xyxy）
+    DetectRes postProcessDetectEdgeDETR(int idx) {
         auto& input_tensor = backend_->tensor_infos[0];
         auto& class_tensor = backend_->tensor_infos[1];
         auto& box_tensor   = backend_->tensor_infos[2];
@@ -263,6 +281,179 @@ public:
         }
 
         return result;
+    }
+
+    // RF-DETR 风格：2 个输出（pred_boxes 归一化 cxcywh + logits 原始 logit，需要 sigmoid + argmax）
+    DetectRes postProcessDetectRFDETR(int idx) {
+        auto& input_tensor = backend_->tensor_infos[0];
+        // 在 resolveDetectVariant() 中确保了 tensor_infos[1]=pred_boxes, tensor_infos[2]=logits
+        auto& box_tensor    = backend_->tensor_infos[1];
+        auto& logit_tensor  = backend_->tensor_infos[2];
+
+        int    max_num     = box_tensor.shape.d[1];
+        int    num_classes = logit_tensor.shape.d[2];
+        float* boxes       = static_cast<float*>(box_tensor.buffer->host()) + idx * max_num * box_tensor.shape.d[2];
+        float* logits      = static_cast<float*>(logit_tensor.buffer->host()) + idx * max_num * num_classes;
+
+        DetectRes result;
+        result.num        = 0;
+        int   height      = input_tensor.shape.d[2];
+        int   width       = input_tensor.shape.d[3];
+        float conf_thresh = backend_->infer_config.config.conf_thresh;
+
+        auto& transform = backend_->infer_config.input_shape.has_value()
+                              ? backend_->transforms.front()
+                              : backend_->transforms[idx];
+
+        result.boxes.reserve(max_num);
+        result.scores.reserve(max_num);
+        result.classes.reserve(max_num);
+
+        // RF-DETR 的 logits 通道对应训练时的完整类别空间：
+        //   - 对于 COCO 预训练权重，num_classes==91 表示原始 COCO category id (0..90，带 gap)，
+        //     此时 index 32 = "tie"（领带），并非 80-class 连续序号中的 "sports ball"。
+        //     若使用 80-class 的 labels.txt，需要在上层做 91→80 的映射，或改用 91-class 的 labels.txt。
+        //   - 自定义训练时，num_classes 等于训练类别数，类别索引直接与用户的 labels.txt 对应。
+        // 我们不在这里做任何类别偏移，避免二次错位。
+        for (int i = 0; i < max_num; ++i) {
+            float* logit_row = logits + i * num_classes;
+            int    best_c    = 0;
+            float  best_l    = logit_row[0];
+            for (int c = 1; c < num_classes; ++c) {
+                if (logit_row[c] > best_l) {
+                    best_l = logit_row[c];
+                    best_c = c;
+                }
+            }
+            float score = 1.0f / (1.0f + std::exp(-best_l));
+            if (score <= conf_thresh) continue;
+
+            float cx = boxes[i * 4 + 0] * width;
+            float cy = boxes[i * 4 + 1] * height;
+            float w  = boxes[i * 4 + 2] * width;
+            float h  = boxes[i * 4 + 3] * height;
+            float left = cx - w * 0.5f, top = cy - h * 0.5f;
+            float right = cx + w * 0.5f, bottom = cy + h * 0.5f;
+
+            transform.apply(left, top, &left, &top);
+            transform.apply(right, bottom, &right, &bottom);
+
+            result.boxes.emplace_back(Box{left, top, right, bottom});
+            result.scores.push_back(score);
+            result.classes.push_back(best_c);
+            ++result.num;
+        }
+
+        return result;
+    }
+
+    // YOLO end-to-end 风格：1 个输出 [B, N, 6]（xyxy 已在模型输入空间像素、score、class）
+    DetectRes postProcessDetectYoloE2E(int idx) {
+        auto& out_tensor = backend_->tensor_infos[1];
+
+        int    max_num = out_tensor.shape.d[1];
+        int    stride  = out_tensor.shape.d[2];  // 通常为 6
+        float* data    = static_cast<float*>(out_tensor.buffer->host()) + idx * max_num * stride;
+
+        DetectRes result;
+        result.num        = 0;
+        float conf_thresh = backend_->infer_config.config.conf_thresh;
+
+        auto& transform = backend_->infer_config.input_shape.has_value()
+                              ? backend_->transforms.front()
+                              : backend_->transforms[idx];
+
+        result.boxes.reserve(max_num);
+        result.scores.reserve(max_num);
+        result.classes.reserve(max_num);
+
+        for (int i = 0; i < max_num; ++i) {
+            float* row   = data + i * stride;
+            float  score = row[4];
+            if (score <= conf_thresh) continue;
+
+            float left   = row[0];  // 已经是模型输入空间像素坐标，不再乘 (W, H)
+            float top    = row[1];
+            float right  = row[2];
+            float bottom = row[3];
+            int   cls    = static_cast<int>(row[5]);
+
+            transform.apply(left, top, &left, &top);
+            transform.apply(right, bottom, &right, &bottom);
+
+            result.boxes.emplace_back(Box{left, top, right, bottom});
+            result.scores.push_back(score);
+            result.classes.push_back(cls);
+            ++result.num;
+        }
+
+        return result;
+    }
+
+    // 根据输出张量数量与形状嗅探检测输出变体（不依赖 tensor 名称，兼容不同导出脚本）
+    DetectVariant resolveDetectVariant() {
+        // 用户显式指定则直接返回
+        DetectVariant requested = backend_->infer_config.detect_variant;
+        if (requested != DetectVariant::Auto) return requested;
+
+        // 统计输出张量数量（tensor_infos[0] 恒为 input）
+        int num_outputs = 0;
+        for (auto& ti : backend_->tensor_infos) {
+            if (!ti.input) ++num_outputs;
+        }
+
+        auto shape_str = [&]() {
+            std::stringstream ss;
+            for (auto& ti : backend_->tensor_infos) {
+                if (ti.input) continue;
+                ss << ti.name << "[";
+                for (int d = 0; d < ti.shape.nbDims; ++d) {
+                    if (d) ss << ",";
+                    ss << ti.shape.d[d];
+                }
+                ss << "] ";
+            }
+            return ss.str();
+        };
+
+        // 1 个输出 & 最后一维为 6  ->  YOLO end-to-end [B, N, 6]
+        if (num_outputs == 1) {
+            auto& ti = backend_->tensor_infos[1];
+            if (ti.shape.nbDims >= 3 && ti.shape.d[ti.shape.nbDims - 1] == 6) {
+                return DetectVariant::YoloEnd2End;
+            }
+            throw std::runtime_error(MAKE_ERROR_MESSAGE(
+                "DetectModel: single-output engine but shape is not [B,N,6]; please setDetectVariant explicitly. outputs=" + shape_str()));
+        }
+
+        // 2 个输出：按 shape 判定 RF-DETR，一路 [B,N,4](boxes)，一路 [B,N,C>4](logits)，且 N 一致
+        if (num_outputs == 2) {
+            auto& t1 = backend_->tensor_infos[1];
+            auto& t2 = backend_->tensor_infos[2];
+
+            auto looks_like_box    = [](const nvinfer1::Dims& d) { return d.nbDims == 3 && d.d[2] == 4; };
+            auto looks_like_logits = [](const nvinfer1::Dims& d) { return d.nbDims == 3 && d.d[2] > 4;  };
+
+            const bool same_n = (t1.shape.nbDims == 3 && t2.shape.nbDims == 3 && t1.shape.d[1] == t2.shape.d[1]);
+            if (same_n && looks_like_box(t1.shape) && looks_like_logits(t2.shape)) {
+                return DetectVariant::RFDETR;
+            }
+            if (same_n && looks_like_box(t2.shape) && looks_like_logits(t1.shape)) {
+                // 规范化顺序：tensor_infos[1]=boxes, tensor_infos[2]=logits
+                std::swap(backend_->tensor_infos[1], backend_->tensor_infos[2]);
+                return DetectVariant::RFDETR;
+            }
+            throw std::runtime_error(MAKE_ERROR_MESSAGE(
+                "DetectModel: two-output engine but shapes do not match RF-DETR (expect [B,N,4] + [B,N,C>4]); outputs=" + shape_str()));
+        }
+
+        // 3 个输出  ->  EdgeCrafter / D-FINE / RT-DETR
+        if (num_outputs == 3) {
+            return DetectVariant::EdgeDETR;
+        }
+
+        throw std::runtime_error(MAKE_ERROR_MESSAGE(
+            "DetectModel: unsupported number of output tensors=" + std::to_string(num_outputs) + "; outputs=" + shape_str()));
     }
 
     // OBBModel 的后处理方法实现
@@ -451,6 +642,7 @@ private:
     unsigned long long          total_request_{0};  // < 总请求数
     std::unique_ptr<GpuTimer>   infer_gpu_trace_;   // < GPU推理计时器
     std::unique_ptr<CpuTimer>   infer_cpu_trace_;   // < CPU推理计时器
+    DetectVariant               detect_variant_resolved_{DetectVariant::Auto};  // < 缓存的检测变体（Auto 表示尚未解析）
 };
 
 BaseModel::BaseModel()  = default;

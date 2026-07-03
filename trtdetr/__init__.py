@@ -47,6 +47,7 @@ class TRTDETR:
         mean: Optional[Tuple[float, float, float]] = None,
         std: Optional[Tuple[float, float, float]] = None,
         input_size: Optional[Tuple[int, int]] = None,
+        detect_variant: Optional[str] = None,
     ) -> None:
         """
         Initialize TRTDETR model
@@ -66,6 +67,10 @@ class TRTDETR:
                                                    Only useful when **real input size is constant**
                                                    (e.g. video analysis). Does **not** change model
                                                    native shape. Default None (dynamic).
+            detect_variant (str, optional): Output layout for `task='detect'`. One of
+                                            {'auto', 'detr', 'rfdetr', 'yolo'}. Default 'auto', which
+                                            sniffs the layout from engine outputs. Set explicitly when
+                                            the engine uses non-standard tensor names.
         """
         option = C.option.InferOption()
         option.set_device_id(device)
@@ -81,9 +86,32 @@ class TRTDETR:
             option.set_normalize_params(mean, std)
         if input_size is not None:
             option.set_input_dimensions(input_size[0], input_size[1])
+        if detect_variant is not None:
+            option.set_detect_variant(self._resolve_detect_variant(detect_variant))
 
         self._task = task
         self._model = self.task_map[task](model, option)
+
+    @staticmethod
+    def _resolve_detect_variant(name: str) -> "C.option.DetectVariant":
+        """Map a friendly string to the C++ DetectVariant enum."""
+        key = name.lower()
+        mapping = {
+            "auto":        C.option.DetectVariant.Auto,
+            "detr":        C.option.DetectVariant.EdgeDETR,
+            "edge":        C.option.DetectVariant.EdgeDETR,
+            "edgedetr":    C.option.DetectVariant.EdgeDETR,
+            "rfdetr":      C.option.DetectVariant.RFDETR,
+            "rf-detr":     C.option.DetectVariant.RFDETR,
+            "yolo":        C.option.DetectVariant.YoloEnd2End,
+            "yoloend2end": C.option.DetectVariant.YoloEnd2End,
+        }
+        if key not in mapping:
+            raise ValueError(
+                f"Unknown detect_variant '{name}'. "
+                f"Expected one of: {sorted(set(mapping.keys()))}."
+            )
+        return mapping[key]
 
     @property
     def task_map(self) -> Dict[str, Any]:
