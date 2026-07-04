@@ -40,9 +40,12 @@ With `BUILD_PYTHON=ON`, the build generates `dist/trtdetr-*.whl`
 
 ## Model Conversion
 
-The models supported by this project are mainly converted from [EdgeCrafter](https://github.com/Intellindust-AI-Lab/EdgeCrafter). The Python export flow in EdgeCrafter has been partially modified for model conversion; see [assets/export_onnx.py](assets/export_onnx.py). The exported ONNX keeps only the image input `images` and does not require extra inputs such as the original image size.
+Supported models fall into two categories by export flow:
 
-After exporting ONNX, you can continue using the TensorRT toolchain to build an engine and deploy inference with this project.
+- **Convertible directly with `trtexec`**: RF-DETR, YOLOv26 / YOLO26, and other models whose official repos already provide a single-input ONNX (image only, outputs `labels/boxes/scores`).
+- **Require [`assets/export/export_onnx.py`](assets/export/export_onnx.py)**: RT-DETR, D-FINE, DEIM / DEIMv2, EdgeCrafter and other DETR-style models — their official export scripts feed `orig_target_sizes` into the postprocessor; the script in this repo strips that input and lets this project remap coordinates via the letterbox `Transform` at inference time.
+
+See [assets/export/README.md](assets/export/README.md) for the full model table and step-by-step conversion instructions. After exporting ONNX, use the TensorRT toolchain to build an engine and deploy inference with this project.
 
 ## Python Usage
 

@@ -9,8 +9,6 @@ TensorRT-DETR 是面向 NVIDIA GPU 的 C++/CUDA/TensorRT 推理部署库，提�
 
 - CUDA
 - TensorRT
-- CMake >= 3.18
-- C++17 编译器
 - Python 绑定可选依赖：Python Development、pybind11、pip
 
 ## 编译安装
@@ -40,9 +38,12 @@ pip install dist/trtdetr-*.whl
 
 ## 模型转换
 
-本项目支持的模型主要基于 [EdgeCrafter](https://github.com/Intellindust-AI-Lab/EdgeCrafter) 转换得到。转换模型时，对 EdgeCrafter 的 Python 导出流程做了部分修改，参考 [assets/export_onnx.py](assets/export_onnx.py) 脚本：导出的 ONNX 仅保留图像输入 `images`，不再额外输入原图尺寸等信息。
+本项目按导出方式将支持的模型分为两类：
 
-导出 ONNX 后，可继续使用 TensorRT 工具链构建 engine，再由本项目进行推理部署。
+- **可直接用 `trtexec` 转换**：RF-DETR、YOLOv26 / YOLO26 等官方已提供“单输入 ONNX”的模型。
+- **需参考 [`assets/export/export_onnx.py`](assets/export/export_onnx.py) 转换**：RT-DETR、D-FINE、DEIM / DEIMv2、EdgeCrafter 等 DETR 系模型，需要去掉官方导出脚本中的 `orig_target_sizes` 输入，改由本项目在推理侧通过 letterbox 的 `Transform` 反变换。
+
+完整的模型对照表与转换步骤见 [assets/export/README.md](assets/export/README.md)。导出 ONNX 后，可继续使用 TensorRT 工具链构建 engine，再由本项目进行推理部署。
 
 ## Python 使用
 
