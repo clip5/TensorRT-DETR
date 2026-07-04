@@ -106,11 +106,23 @@ if(BUILD_PYTHON)
         ${PROJECT_SOURCE_DIR}/trtdetr/c_lib_wrap.py
     )
 
-    add_custom_target(python_wheel ALL
+    # 打 wheel 使用 add_custom_command + stamp 文件的方式，让它变成增量目标：
+    # 只有 py_trtdetr（.so）比 stamp 新，或者 pyproject.toml / c_lib_wrap.py 有变化时，
+    # 才会重新执行 pip wheel。这样反复 `cmake --build` 不会每次都触发打包。
+    set(_wheel_stamp ${CMAKE_CURRENT_BINARY_DIR}/python_wheel.stamp)
+    add_custom_command(
+        OUTPUT ${_wheel_stamp}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_SOURCE_DIR}/dist
         COMMAND ${Python_EXECUTABLE} -m pip wheel --no-deps --wheel-dir ${PROJECT_SOURCE_DIR}/dist .
+        COMMAND ${CMAKE_COMMAND} -E touch ${_wheel_stamp}
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        DEPENDS py_trtdetr
+        DEPENDS
+            py_trtdetr
+            $<TARGET_FILE:py_trtdetr>
+            ${PROJECT_SOURCE_DIR}/pyproject.toml
+            ${PROJECT_SOURCE_DIR}/trtdetr/c_lib_wrap.py
         COMMENT "Building Python wheel into ${PROJECT_SOURCE_DIR}/dist"
+        VERBATIM
     )
+    add_custom_target(python_wheel ALL DEPENDS ${_wheel_stamp})
 endif()
