@@ -456,8 +456,72 @@ public:
             "DetectModel: unsupported number of output tensors=" + std::to_string(num_outputs) + "; outputs=" + shape_str()));
     }
 
-    // OBBModel 的后处理方法实现
-    OBBRes postProcessOBB(int idx) {
+    // OBBModel 的后处理方法实现：EdgeCrafter / RT-DETRv2-OBB 风格
+    // 3 个输出：labels[B,N](int64)、boxes[B,N,5](归一化 cx,cy,w,h,theta)、scores[B,N]
+    OBBRes postProcessOBBOBB(int idx) {
+        auto& input_tensor = backend_->tensor_infos[0];
+        auto& class_tensor = backend_->tensor_infos[1];
+        auto& box_tensor   = backend_->tensor_infos[2];
+        auto& score_tensor = backend_->tensor_infos[3];
+
+        int    max_num = class_tensor.shape.d[1];
+        auto label_at = [&](int i) -> int {
+            switch (class_tensor.dtype()) {
+                case nvinfer1::DataType::kINT32:
+                    return static_cast<int*>(class_tensor.buffer->host())[idx * class_tensor.shape.d[1] + i];
+                case nvinfer1::DataType::kINT64:
+                    return static_cast<int>(static_cast<int64_t*>(class_tensor.buffer->host())[idx * class_tensor.shape.d[1] + i]);
+                case nvinfer1::DataType::kFLOAT:
+                    return static_cast<int>(static_cast<float*>(class_tensor.buffer->host())[idx * class_tensor.shape.d[1] + i]);
+                default:
+                    throw std::runtime_error(MAKE_ERROR_MESSAGE("OBBModel: unsupported labels dtype"));
+            }
+        };
+        float* boxes  = static_cast<float*>(box_tensor.buffer->host()) + idx * box_tensor.shape.d[1] * box_tensor.shape.d[2];
+        float* scores = static_cast<float*>(score_tensor.buffer->host()) + idx * score_tensor.shape.d[1];
+
+        OBBRes result;
+        result.num   = 0;
+        int box_size = box_tensor.shape.d[2];
+        int height   = input_tensor.shape.d[2];
+        int width    = input_tensor.shape.d[3];
+        float conf_thresh = backend_->infer_config.config.conf_thresh;
+
+        auto& transform = backend_->infer_config.input_shape.has_value()
+                              ? backend_->transforms.front()
+                              : backend_->transforms[idx];
+
+        result.boxes.reserve(max_num);
+        result.scores.reserve(max_num);
+        result.classes.reserve(max_num);
+
+        for (int i = 0; i < max_num; ++i) {
+            if (scores[i] <= conf_thresh) continue;
+
+            int   base_index = i * box_size;
+            float cx = boxes[base_index + 0] * width;
+            float cy = boxes[base_index + 1] * height;
+            float w  = boxes[base_index + 2] * width;
+            float h  = boxes[base_index + 3] * height;
+            float theta = boxes[base_index + 4];
+            float left = cx - w * 0.5f, top = cy - h * 0.5f;
+            float right = cx + w * 0.5f, bottom = cy + h * 0.5f;
+
+            transform.apply(left, top, &left, &top);
+            transform.apply(right, bottom, &right, &bottom);
+
+            result.boxes.emplace_back(RotatedBox{left, top, right, bottom, theta});
+            result.scores.push_back(scores[i]);
+            result.classes.push_back(label_at(i));
+            ++result.num;
+        }
+
+        return result;
+    }
+
+    // OBBModel 的后处理方法实现：TopK 风格
+    // 4 个输出：nums[B]、boxes[B,N,5]（像素坐标 l,t,r,b + theta）、scores[B,N]、classes[B,N]
+    OBBRes postProcessOBBOBBTopK(int idx) {
         auto& num_tensor   = backend_->tensor_infos[1];
         auto& box_tensor   = backend_->tensor_infos[2];
         auto& score_tensor = backend_->tensor_infos[3];
@@ -495,6 +559,16 @@ public:
         }
 
         return result;
+    }
+
+    // 按输出张量数量选择 OBB 变体：3 输出 -> EdgeDETR 风格，4 输出 -> TopK 风格
+    OBBRes postProcessOBB(int idx) {
+        int num_outputs = 0;
+        for (auto& ti : backend_->tensor_infos) {
+            if (!ti.input) ++num_outputs;
+        }
+        if (num_outputs == 3) return postProcessOBBOBB(idx);
+        return postProcessOBBOBBTopK(idx);
     }
 
     // SegmentModel 的后处理方法实现

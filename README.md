@@ -7,7 +7,7 @@
 [![CUDA](https://img.shields.io/badge/CUDA-11.8%2B-76b900.svg)]()
 [![TensorRT](https://img.shields.io/badge/TensorRT-8.x%20%7C%2010.x-76b900.svg)]()
 
-TensorRT-DETR 是面向 NVIDIA GPU 的 C++/CUDA/TensorRT 推理部署库，提供 C++ 与 Python 两套接口，当前覆盖目标检测、实例分割、姿态估计任务（OBB 支持规划中）。
+TensorRT-DETR 是面向 NVIDIA GPU 的 C++/CUDA/TensorRT 推理部署库，提供 C++ 与 Python 两套接口，当前覆盖目标检测、实例分割、姿态估计、旋转目标检测（OBB）任务。
 
 <div align="center">
   <img src="assets/detect_result.jpg" width="32%">
@@ -52,6 +52,7 @@ print(result)
 | 检测 | ecdet_s | 239 | 4.18 ms | 4.16 ms |
 | 分割 | ecseg_s | 115 | 8.73 ms | 8.72 ms |
 | 姿态 | ecpose_s | 255 | 3.92 ms | 3.91 ms |
+| 旋转框（OBB） | rtdetrv2_obb_hgnetv2_s | 413 | 2.42 ms | 2.40 ms |
 
 ## 📑 目录
 
@@ -114,7 +115,7 @@ pip install dist/trtdetr-*.whl
 cmake -S . -B build \
   -DTRT_PATH=/path/to/tensorrt \
   -DBUILD_EXAMPLES=ON
-cmake --build build -j$(nproc) --config Release --target detect segment pose mutli_thread
+cmake --build build -j$(nproc) --config Release --target detect segment pose obb mutli_thread
 ```
 
 也可以按需关闭部分示例：
@@ -126,6 +127,7 @@ cmake -S . -B build \
   -DBUILD_EXAMPLE_DETECT=ON \
   -DBUILD_EXAMPLE_SEGMENT=OFF \
   -DBUILD_EXAMPLE_POSE=OFF \
+  -DBUILD_EXAMPLE_OBB=OFF \
   -DBUILD_EXAMPLE_MULTI_THREAD=OFF
 ```
 

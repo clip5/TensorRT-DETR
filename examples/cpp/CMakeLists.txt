@@ -39,6 +39,10 @@ if(BUILD_EXAMPLE_POSE)
     add_trtdetr_example(pose "${CMAKE_CURRENT_SOURCE_DIR}/pose")
 endif()
 
+if(BUILD_EXAMPLE_OBB)
+    add_trtdetr_example(obb "${CMAKE_CURRENT_SOURCE_DIR}/obb")
+endif()
+
 if(BUILD_EXAMPLE_MULTI_THREAD)
     add_trtdetr_example(mutli_thread "${CMAKE_CURRENT_SOURCE_DIR}/mutli_thread")
 endif()

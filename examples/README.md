@@ -10,11 +10,13 @@ examples/
 │   ├── detect/
 │   ├── segment/
 │   ├── pose/
+│   ├── obb/
 │   └── mutli_thread/
 ├── python/              # Python 示例源码
 │   ├── detect/
 │   ├── segment/
 │   ├── pose/
+│   ├── obb/
 │   └── mutli_thread/
 ├── nndeploy/            # nndeploy 工作流示例
 └── VideoPipe/           # VideoPipe 集成示例
@@ -28,7 +30,7 @@ examples/
 
 ```bash
 cmake -S . -B build -DTRT_PATH=/path/to/tensorrt -DBUILD_EXAMPLES=ON
-cmake --build build -j$(nproc) --config Release --target detect segment pose mutli_thread
+cmake --build build -j$(nproc) --config Release --target detect segment pose obb mutli_thread
 ```
 
 也可以只开启部分示例：
@@ -40,6 +42,7 @@ cmake -S . -B build \
   -DBUILD_EXAMPLE_DETECT=ON \
   -DBUILD_EXAMPLE_SEGMENT=OFF \
   -DBUILD_EXAMPLE_POSE=OFF \
+  -DBUILD_EXAMPLE_OBB=OFF \
   -DBUILD_EXAMPLE_MULTI_THREAD=OFF
 ```
 

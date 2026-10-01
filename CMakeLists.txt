@@ -31,10 +31,12 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
 # CUDA 配置
 find_package(CUDAToolkit REQUIRED)
 
-# 默认的 CUDA 架构
-set(CMAKE_CUDA_ARCHITECTURES 72 75 80 86 87 89 90 CACHE STRING "CUDA architectures" FORCE)
-if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 12.8)
-    list(APPEND CMAKE_CUDA_ARCHITECTURES 100 120)
+# 默认的 CUDA 架构（若用户已显式指定 -DCMAKE_CUDA_ARCHITECTURES 则不覆盖）
+if(NOT CMAKE_CUDA_ARCHITECTURES)
+    set(CMAKE_CUDA_ARCHITECTURES 72 75 80 86 87 89 90 CACHE STRING "CUDA architectures" FORCE)
+    if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 12.8)
+        list(APPEND CMAKE_CUDA_ARCHITECTURES 100 120)
+    endif()
 endif()
 message(STATUS "CUDA code for default SMs: ${CMAKE_CUDA_ARCHITECTURES}")
 
@@ -69,6 +71,7 @@ option(BUILD_EXAMPLES "Build C++ examples" ON)
 option(BUILD_EXAMPLE_DETECT "Build detect C++ example" ON)
 option(BUILD_EXAMPLE_SEGMENT "Build segment C++ example" ON)
 option(BUILD_EXAMPLE_POSE "Build pose C++ example" ON)
+option(BUILD_EXAMPLE_OBB "Build obb C++ example" ON)
 option(BUILD_EXAMPLE_MULTI_THREAD "Build multi-thread C++ example" ON)
 option(BUILD_EXAMPLE_NNDEPLOY "Enable nndeploy example target" OFF)
 

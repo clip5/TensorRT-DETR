@@ -7,7 +7,7 @@ English | [简体中文](README.md)
 [![CUDA](https://img.shields.io/badge/CUDA-11.8%2B-76b900.svg)]()
 [![TensorRT](https://img.shields.io/badge/TensorRT-8.x%20%7C%2010.x-76b900.svg)]()
 
-TensorRT-DETR is a C++/CUDA/TensorRT inference deployment library for NVIDIA GPUs. It provides C++ and Python APIs currently covering object detection, instance segmentation, and pose estimation (OBB support planned).
+TensorRT-DETR is a C++/CUDA/TensorRT inference deployment library for NVIDIA GPUs. It provides C++ and Python APIs currently covering object detection, instance segmentation, pose estimation, and oriented object detection (OBB).
 
 <div align="center">
   <img src="assets/detect_result.jpg" width="32%">
@@ -18,7 +18,7 @@ TensorRT-DETR is a C++/CUDA/TensorRT inference deployment library for NVIDIA GPU
 
 ## ✨ Features
 
-- 🚀 Tasks: Detect / Segment / Pose (OBB support planned)
+- 🚀 Tasks: Detect / Segment / Pose / OBB (Oriented Bounding Box)
 - ⚡ Built on the [TensorRT-YOLO](https://github.com/laugh12321/TensorRT-YOLO) inference kernel: CUDA Stream + CUDA Graph acceleration, GPU-side letterbox preprocessing
 - 🧠 Multiple memory strategies: Device / Unified / Mapped
 - 🔗 Both C++ and Python APIs, one-click pybind11 wheel install
@@ -52,6 +52,7 @@ Measured on an RTX 4070 Ti SUPER (batch=1, FP16 engine, 640×640 input):
 | Detect | ecdet_s | 239 | 4.18 ms | 4.16 ms |
 | Segment | ecseg_s | 115 | 8.73 ms | 8.72 ms |
 | Pose | ecpose_s | 255 | 3.92 ms | 3.91 ms |
+| OBB | rtdetrv2_obb_hgnetv2_s | 413 | 2.42 ms | 2.40 ms |
 
 ## 📑 Table of Contents
 
@@ -114,7 +115,7 @@ Build examples from the repository root:
 cmake -S . -B build \
   -DTRT_PATH=/path/to/tensorrt \
   -DBUILD_EXAMPLES=ON
-cmake --build build -j$(nproc) --config Release --target detect segment pose mutli_thread
+cmake --build build -j$(nproc) --config Release --target detect segment pose obb mutli_thread
 ```
 
 Individual examples can be toggled:
@@ -126,6 +127,7 @@ cmake -S . -B build \
   -DBUILD_EXAMPLE_DETECT=ON \
   -DBUILD_EXAMPLE_SEGMENT=OFF \
   -DBUILD_EXAMPLE_POSE=OFF \
+  -DBUILD_EXAMPLE_OBB=OFF \
   -DBUILD_EXAMPLE_MULTI_THREAD=OFF
 ```
 
