@@ -7,18 +7,19 @@
 [![CUDA](https://img.shields.io/badge/CUDA-11.8%2B-76b900.svg)]()
 [![TensorRT](https://img.shields.io/badge/TensorRT-8.x%20%7C%2010.x-76b900.svg)]()
 
-TensorRT-DETR 是面向 NVIDIA GPU 的 C++/CUDA/TensorRT 推理部署库，提供 C++ 与 Python 两套接口，当前覆盖目标检测、实例分割、姿态估计、旋转目标检测（OBB）任务。
+TensorRT-DETR 是面向 NVIDIA GPU 的 C++/CUDA/TensorRT 推理部署库，提供 C++ 与 Python 两套接口，当前覆盖目标检测、实例分割、姿态估计、旋转目标检测任务。
 
 <div align="center">
-  <img src="assets/detect_result.jpg" width="32%">
-  <img src="assets/segment_result.jpg" width="32%">
-  <img src="assets/pose_result.jpg" width="32%">
-  <p><em>检测 · 分割 · 姿态估计 — 单张 RTX 4070 Ti SUPER 上最高 255 QPS</em></p>
+  <img src="assets/detect_result.jpg" width="24%">
+  <img src="assets/segment_result.jpg" width="24%">
+  <img src="assets/pose_result.jpg" width="24%">
+  <img src="assets/obb_result.jpg" width="24%">
+  <p><em>检测 · 分割 · 姿态估计 · 旋转框</em></p>
 </div>
 
 ## ✨ 特性
 
-- 🚀 任务覆盖：检测 / 分割 / 姿态（OBB 支持规划中）
+- 🚀 任务覆盖：检测 / 分割 / 姿态 / 旋转框
 - ⚡ 基于 [TensorRT-YOLO](https://github.com/laugh12321/TensorRT-YOLO) 推理内核：CUDA Stream + CUDA Graph 加速、GPU 端 letterbox 预处理
 - 🧠 多种内存策略：Device / Unified / Mapped 按需切换
 - 🔗 C++ 与 Python 双接口，pybind11 wheel 一键安装
@@ -52,21 +53,23 @@ print(result)
 | 检测 | ecdet_s | 239 | 4.18 ms | 4.16 ms |
 | 分割 | ecseg_s | 115 | 8.73 ms | 8.72 ms |
 | 姿态 | ecpose_s | 255 | 3.92 ms | 3.91 ms |
-| 旋转框（OBB） | rtdetrv2_obb_hgnetv2_s | 413 | 2.42 ms | 2.40 ms |
+| 旋转框 | rtdetrv2_obb_hgnetv2_s | 413 | 2.42 ms | 2.40 ms |
 
 ## 📑 目录
 
-- [✨ 特性](#-特性)
-- [🚀 快速开始](#-快速开始python)
-- [📊 性能](#-性能)
-- [依赖](#依赖)
-- [🔨 编译安装](#-编译安装)
-- [📦 模型转换](#-模型转换)
-- [🧩 C++ 示例](#-c-示例)
-- [🐍 Python 使用](#-python-使用)
-- [🔧 C++ 使用](#-c-使用)
-- [许可证](#许可证)
-- [🙏 致谢](#-致谢)
+- [TensorRT-DETR](#tensorrt-detr)
+  - [✨ 特性](#-特性)
+  - [🚀 快速开始（Python）](#-快速开始python)
+  - [📊 性能](#-性能)
+  - [📑 目录](#-目录)
+  - [依赖](#依赖)
+  - [🔨 编译安装](#-编译安装)
+  - [📦 模型转换](#-模型转换)
+  - [🧩 C++ 示例](#-c-示例)
+  - [🐍 Python 使用](#-python-使用)
+  - [🔧 C++ 使用](#-c-使用)
+  - [许可证](#许可证)
+  - [🙏 致谢](#-致谢)
 
 ## 依赖
 
@@ -104,6 +107,8 @@ pip install dist/trtdetr-*.whl
 ## 📦 模型转换
 
 本项目支持的模型主要基于 [EdgeCrafter](https://github.com/Intellindust-AI-Lab/EdgeCrafter) 转换得到。转换模型时，对 EdgeCrafter 的 Python 导出流程做了部分修改，参考 [assets/export_onnx.py](assets/export_onnx.py) 脚本：导出的 ONNX 仅保留图像输入 `images`，不再额外输入原图尺寸等信息。
+
+此外，旋转目标检测基于 [RiO-DETR](https://github.com/RicePasteM/RiO-DETR)，其官方 ONNX 为单输入 `labels/boxes/scores` 三输出，可直接用 `trtexec` 构建 engine，转换说明见 [assets/export/README.md](assets/export/README.md)。
 
 导出 ONNX 后，可继续使用 TensorRT 工具链构建 engine，再由本项目进行推理部署。
 

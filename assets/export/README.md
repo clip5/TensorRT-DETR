@@ -12,7 +12,7 @@
 | D-FINE | [Peterande/D-FINE](https://github.com/Peterande/D-FINE) | 同上 | 是，见[第二节](#二需要参考-export_onnxpy-转换的模型) |
 | DEIM / DEIMv2 | [ShihuaHuang95/DEIM](https://github.com/ShihuaHuang95/DEIM) | 同上 | 是，见[第二节](#二需要参考-export_onnxpy-转换的模型) |
 | EdgeCrafter | [Intellindust-AI-Lab/EdgeCrafter](https://github.com/Intellindust-AI-Lab/EdgeCrafter) | 同上 | 是，见[第二节](#二需要参考-export_onnxpy-转换的模型) |
-| RT-DETRv2-OBB | [lyuwenyu/RT-DETR](https://github.com/lyuwenyu/RT-DETR)（OBB 分支/配置） | 官方 ONNX 即单输入 `labels/boxes/scores` 三输出，`trtexec` 直接转换 | 否，见[第一节](#一直接使用-trtexec-转换的模型) |
+| RiO-DETR (OBB) | [RicePasteM/RiO-DETR](https://github.com/RicePasteM/RiO-DETR) | 官方 ONNX 即单输入 `labels/boxes/scores` 三输出，`trtexec` 直接转换 | 否，见[第一节](#一直接使用-trtexec-转换的模型) |
 
 > 判定原则：**ONNX 只有 `images` 一个输入且输出为 `labels/boxes/scores`** 的模型属于第一类，可直接 `trtexec`；若官方导出脚本会额外把 `orig_target_sizes` 送进 postprocessor，则属于第二类，需要用本目录的 `export_onnx.py` 去掉该输入。
 
@@ -44,7 +44,7 @@ trtexec \
 
 > RF-DETR / YOLO26 的 ONNX 导出方式请参考各自官方仓库的文档；本项目仅负责部署侧的 engine 构建与推理。
 
-**OBB（旋转目标检测）示例**：RT-DETRv2-OBB（如 `rtdetrv2_obb_hgnetv2_s_dota_1_ss.onnx`）的官方 ONNX 输入只有 `images`（1x3x1024x1024），输出为 `labels[B,N]` / `boxes[B,N,5]`（归一化 `cx,cy,w,h,theta`）/ `scores[B,N]`，直接 `trtexec` 转换即可：
+**OBB（旋转目标检测）示例**：[RiO-DETR](https://github.com/RicePasteM/RiO-DETR)（如 `rtdetrv2_obb_hgnetv2_s_dota_1_ss.onnx`）的官方 ONNX 输入只有 `images`（1x3x1024x1024），输出为 `labels[B,N]` / `boxes[B,N,5]`（归一化 `cx,cy,w,h,theta`）/ `scores[B,N]`，直接 `trtexec` 转换即可：
 
 ```bash
 trtexec \

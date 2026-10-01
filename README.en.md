@@ -10,10 +10,11 @@ English | [简体中文](README.md)
 TensorRT-DETR is a C++/CUDA/TensorRT inference deployment library for NVIDIA GPUs. It provides C++ and Python APIs currently covering object detection, instance segmentation, pose estimation, and oriented object detection (OBB).
 
 <div align="center">
-  <img src="assets/detect_result.jpg" width="32%">
-  <img src="assets/segment_result.jpg" width="32%">
-  <img src="assets/pose_result.jpg" width="32%">
-  <p><em>Detection · Segmentation · Pose Estimation — up to 255 QPS on a single RTX 4070 Ti SUPER</em></p>
+  <img src="assets/detect_result.jpg" width="24%">
+  <img src="assets/segment_result.jpg" width="24%">
+  <img src="assets/pose_result.jpg" width="24%">
+  <img src="assets/obb_result.jpg" width="24%">
+  <p><em>Detection · Segmentation · Pose Estimation · OBB</em></p>
 </div>
 
 ## ✨ Features
@@ -56,17 +57,19 @@ Measured on an RTX 4070 Ti SUPER (batch=1, FP16 engine, 640×640 input):
 
 ## 📑 Table of Contents
 
-- [✨ Features](#-features)
-- [🚀 Quick Start](#-quick-start-python)
-- [📊 Performance](#-performance)
-- [Requirements](#requirements)
-- [🔨 Build and Install](#-build-and-install)
-- [📦 Model Conversion](#-model-conversion)
-- [🧩 C++ Examples](#-c-examples)
-- [🐍 Python Usage](#-python-usage)
-- [🔧 C++ Usage](#-c-usage)
-- [License](#license)
-- [🙏 Acknowledgements](#-acknowledgements)
+- [TensorRT-DETR](#tensorrt-detr)
+  - [✨ Features](#-features)
+  - [🚀 Quick Start (Python)](#-quick-start-python)
+  - [📊 Performance](#-performance)
+  - [📑 Table of Contents](#-table-of-contents)
+  - [Requirements](#requirements)
+  - [🔨 Build and Install](#-build-and-install)
+  - [📦 Model Conversion](#-model-conversion)
+  - [🧩 C++ Examples](#-c-examples)
+  - [🐍 Python Usage](#-python-usage)
+  - [🔧 C++ Usage](#-c-usage)
+  - [License](#license)
+  - [🙏 Acknowledgements](#-acknowledgements)
 
 ## Requirements
 
@@ -104,6 +107,8 @@ With `BUILD_PYTHON=ON`, the build generates `dist/trtdetr-*.whl`
 ## 📦 Model Conversion
 
 The models supported by this project are mainly converted from [EdgeCrafter](https://github.com/Intellindust-AI-Lab/EdgeCrafter). The Python export flow in EdgeCrafter has been partially modified for model conversion; see [assets/export_onnx.py](assets/export_onnx.py). The exported ONNX keeps only the image input `images` and does not require extra inputs such as the original image size.
+
+In addition, oriented object detection (OBB) is based on [RiO-DETR](https://github.com/RicePasteM/RiO-DETR). Its official ONNX has a single `images` input with three outputs (`labels`/`boxes`/`scores`) and can be built into an engine with `trtexec` directly; see [assets/export/README.md](assets/export/README.md) for conversion details.
 
 After exporting ONNX, you can continue using the TensorRT toolchain to build an engine and deploy inference with this project.
 
